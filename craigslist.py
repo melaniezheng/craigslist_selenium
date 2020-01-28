@@ -1,7 +1,3 @@
-# YouTube Video (Part 1): https://www.youtube.com/watch?v=4o2Eas2WqAQ&t=0s&list=PL5tcWHG-UPH1aSWALagYP2r3RMmuslcrr
-# YouTube Video (Part 2): https://www.youtube.com/watch?v=x5o0XFozYnE&t=716s&list=PL5tcWHG-UPH1aSWALagYP2r3RMmuslcrr
-# YouTube Video (Part 3): https://www.youtube.com/watch?v=_y43iqSJgnc&t=1s&list=PL5tcWHG-UPH1aSWALagYP2r3RMmuslcrr
-
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -13,16 +9,18 @@ import urllib.request
 
 
 class CraiglistScraper(object):
-    def __init__(self, location, postal, max_price, radius):
-        self.location = location
-        self.postal = postal
+    def __init__(self, boro, min_price, max_price, min_bedrooms, max_bedrooms):
+        self.boro = boro
         self.max_price = max_price
-        self.radius = radius
+        self.min_price = min_price
+        self.min_bedrooms = min_bedrooms
+        self.max_bedrooms = max_bedrooms
+        
 
-        self.url = f"https://{location}.craigslist.org/search/sss?search_distance={radius}&postal={postal}&max_price={max_price}"
+        self.url = f"https://{location}.craigslist.org/search/{boro}/apa?min_price={min_price}&max_price={max_price}&min_bedrooms={min_bedrooms}&max_bedrooms={max_bedrooms}"
     
         self.driver = webdriver.Firefox()
-        self.delay = 3
+        self.delay = 5
 
     def load_craigslist_url(self):
         self.driver.get(self.url)
@@ -81,15 +79,16 @@ class CraiglistScraper(object):
     def quit(self):
         self.driver.close()
 
+boro = "mnh" #brk for BK, que for Queens, brx for Bronx, stn for Staten Island
+location = "newyork"
+min_price = "1500"
+max_price = "2500"
+min_bedrooms = "1"
+max_bedrooms = "1"
 
-location = "sfbay"
-postal = "94201"
-max_price = "500"
-radius = "5"
-
-scraper = CraiglistScraper(location, postal, max_price, radius)
+scraper = CraiglistScraper(boro, min_price, max_price, min_bedrooms, max_bedrooms)
 scraper.load_craigslist_url()
-titles, prices, dates = scraper.extract_post_information()
-print(titles)
+# titles, prices, dates = scraper.extract_post_information()
+# print(titles)
 #scraper.extract_post_urls()
 #scraper.quit()
