@@ -17,9 +17,8 @@ class CraiglistScraper(object):
         self.max_bedrooms = max_bedrooms
         
 
-        self.url = f"https://{location}.craigslist.org/search/{boro}/apa?min_price={min_price}&max_price={max_price}&min_bedrooms={min_bedrooms}&max_bedrooms={max_bedrooms}"
-    
-        self.driver = webdriver.Firefox()
+        self.url = f"https://{location}.craigslist.org/search/{boro}/apa?min_price={min_price}&max_price={max_price}&min_bedrooms={min_bedrooms}&max_bedrooms={max_bedrooms}&pets_cat=1&pets_dog=1&broker_fee=1"
+        self.driver = webdriver.Chrome("/Users/melaniezheng/Downloads/chromedriver")
         self.delay = 5
 
     def load_craigslist_url(self):
@@ -27,7 +26,7 @@ class CraiglistScraper(object):
         try:
             wait = WebDriverWait(self.driver, self.delay)
             wait.until(EC.presence_of_element_located((By.ID, "searchform")))
-            print("Page is ready")
+            print("Page is loaded") 
         except TimeoutException:
             print("Loading took too much time")
 
