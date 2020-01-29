@@ -11,6 +11,8 @@ import pandas as pd
 import csv
 import re
 import traceback
+import itertools as it
+
 
 class CraiglistScraper(object):
     def __init__(self, boro, min_price, max_price, min_bedrooms, max_bedrooms, dogs_ok = 0, cats_ok = 0, no_broker_fee = 0):
@@ -41,128 +43,129 @@ class CraiglistScraper(object):
             url = starter + "&pets_cat=1&pets_dog=1&broker_fee=1"
         return url
 
-    def load_url(self):
+    def get_total_count(self):
         self.driver.get(self.generate_url())
+        try:
+            wait = WebDriverWait(self.driver, self.delay)
+            wait.until(EC.presence_of_element_located((By.ID, "searchform")))
+        except TimeoutException:
+            print("First URL Loading took too much time")
+    
+        total_count = self.driver.find_elements_by_class_name("totalcount")
+        for count in total_count:
+            pages = count.text#.split("$")
+            #page = pages[0]
+            print("PAGE: " + pages)
+
+        return int(pages)
+
+    def generate_url_lst(self, count):
+        # generate a list of urls for each page...
+        url_lst = []
+        url = self.generate_url()
+        for page in range(0, count, 120):
+            page = str(page)
+            url_pp = url + "&s=" + page
+            url_lst.append(url_pp)
+        return url_lst
+
+    def load_url(self, url):
+        self.driver.get(url)
         try:
             wait = WebDriverWait(self.driver, self.delay)
             wait.until(EC.presence_of_element_located((By.ID, "searchform")))
         except TimeoutException:
             print("Loading took too much time")
 
-    def extract_posts(self):
-        all_posts = self.driver.find_elements_by_class_name("result-info")
-        total_count = self.driver.find_elements_by_class_name("totalcount")
 
-        dates = []
-        titles = []
-        prices = []
-        neighborhoods = []
-        sizes = []
-        bedrooms = []
-        for count in total_count:
-            pages = count.text#.split("$")
-            #page = pages[0]
-            print("PAGE: " + pages)
+    def extract_posts(self, single_page_result=[]):
 
-        for post in all_posts:
-            result = post.text.split("$")
-            # print(result)
-
-            if len(result)==2:
-                title_str, price_str = result
-                date_list = title_str.split(" ")
-                title_str = ' '.join(date_list[2:])
-            elif len(result)==3:
-                date_str, title_str, price_str = result
-                date_list = date_str.split(" ")
-            elif len(result) <2:
-                print("could not split by $")
-
-            month = date_list[0].replace(" ","")
-            day = date_list[1].replace(" ","")
-            date = month + " " + day
-
-            
-            print("TITLE: " + title_str)
-            # print("DATE: " + date)
-
-            price_list = price_str.split("-")
-            size = ''
-            bedroom = ''
-            if len(price_list) == 3:
-                price, size, neighborhood = price_list
-            elif len(price_list) == 2:
-                price, neighborhood = price_list
-                size = 'NA'
-            elif len(price_list) == 1: #['2675 (Upper East Side)']
-                price_list = price_list[0].split(" ")
-                price = price_list[0]
-                neighborhood = ' '.join(price_list[1:])
-            else:
-                print(" -------- need to analyze more ------")
-                print(price_list)
-            
-            if len(price.split(" "))>=2:
-                bedroom = price.split(" ")[1]
-                price = price.split(" ")[0]
-
-            # print("PRICE: " + price)
-            # print("SIZE: " + size)
-            # print("HOOD: " + neighborhood)
-            # print("BEDROOM: " + bedroom)
-
-            dates.append(date)
-            titles.append(title_str)
-            prices.append(price)
-            sizes.append(size)
-            neighborhoods.append(neighborhood)
-            bedrooms.append(bedroom)
-            
-        return dates, titles, prices, bedrooms, sizes, neighborhoods
-
-    def extract_post_urls(self):
-        url_list = []
-        datetime_list = []
         html_page = urllib.request.urlopen(self.generate_url())
         soup = BeautifulSoup(html_page, "lxml")
-        for link in soup.findAll("a", {"class": "result-title hdrlnk"}):
-            # print(link["href"])
-            url_list.append(link["href"])
-        for time in soup.findAll("time", {"class": "result-date"}):
-            # print(time["datetime"])
-            datetime_list.append(time["datetime"])
-        return url_list, datetime_list
+        for result in soup.findAll("p", {"class": "result-info"}):
+            single_post = {}
+            try:
+                url = result.find("a", {"class": "result-title hdrlnk"})
+                url = url["href"]
+            except:
+                continue
+            try:
+                post_date = result.find("time", {"class": "result-date"})
+                post_date = post_date["datetime"]
+            except:
+                post_date = ""
+            try: 
+                title = result.find('a').string
+            except:
+                title = ""
+            try:
+                price = result.find('span', {'class':'result-price'}).string
+            except:
+                price = ""
+            try:
+                neighborhood = result.find('span', {'class':'result-hood'}).string.strip()
+            except:
+                neighborhood = ""
+            try:
+                bedrooms = result.find('span', {'class':'housing'}).string
+            except:
+                bedrooms = ""
+            try:
+                housing = result.find('span', {'class':'housing'}).string.split("-")
+                if len(housing)>1:
+                    bedrooms = housing[0]
+                    size = housing[1]
+            except:
+                size = ""
+
+            single_post['url'] = url
+            single_post['post_date'] = post_date
+            single_post['title'] = title
+            single_post['price'] = price
+            single_post['boro'] = self.boro
+            single_post['neighborhood'] = neighborhood
+            single_post['bedrooms'] = bedrooms
+            single_post['size'] = size
+            single_post['dogs_ok'] = self.dogs_ok
+            single_post['cats_ok'] = self.cats_ok
+            single_post["no_broker_fee"] = self.no_broker_fee
+
+            single_page_result.append(single_post)
+        return single_page_result
         
     def quit(self):
         self.driver.close()
-    
-    
-    def write_to_tsv(self, boro, date, datetime_list, url, title, price, boro_lst, bedrooms, size, neighborhood):
+
+    def write_to_tsv(self, all_posts):
         now = datetime.now()
-        #fields = ['date','url','title','price','boro','bedrooms','size','neighborhood']
         file_date = now.strftime("%Y-%m-%d")
-
-        output = "./data/" + file_date + "_" + boro + "_temp.tsv"
-        rows = zip(date, datetime_list, url, title, price, boro_lst, bedrooms, size, neighborhood)
-        with open(output, "w") as f:
-            tsv_writer = csv.writer(f, delimiter='\t')
-            for row in rows:
-                tsv_writer.writerow(row)
-
+        filepath = "./data/" + file_date + "_" + boro + "_dogs_" + str(self.dogs_ok) + \
+            "cats_" + str(self.cats_ok) + "fee_" + str(self.no_broker_fee) + "_temp.tsv"
+        fieldnames = ['url','post_date','title','price','boro','neighborhood','bedrooms','size','dogs_ok', 'cats_ok','no_broker_fee']
+        with open(filepath, "w") as output_file:
+            dict_writer = csv.DictWriter(output_file, fieldnames=fieldnames, delimiter='\t')
+            dict_writer.writeheader()
+            dict_writer.writerows(all_posts)  
 
 location = "newyork"
 boro_list = ["mnh","brk","que","brx","stn"] #brk for BK, que for Queens, brx for Bronx, stn for Staten Island
 min_price = "500"
 max_price = "10000"
 min_bedrooms = "0"
-max_bedrooms = "1"
+max_bedrooms = "6"
 
 for boro in boro_list:
     print(boro)
     scraper = CraiglistScraper(boro, min_price, max_price, min_bedrooms, max_bedrooms)
-    scraper.load_url()
-    date, title, price, bedrooms, size, neighborhood = scraper.extract_posts()
-    url_list, datetime_list = scraper.extract_post_urls()
-    scraper.quit()
-    boro_lst = list(boro) * len(url_list)
-    scraper.write_to_tsv(boro, date, url_list, datetime_list, title, price, boro_lst, bedrooms, size, neighborhood)
+    count = scraper.get_total_count()
+    url_lst = scraper.generate_url_lst(count)
+    print(url_lst)
+    all_posts = []
+    for url in url_lst:
+        scraper.load_url(url)
+        all_posts.append(scraper.extract_posts())
+    all_posts = list(it.chain(*all_posts))
+    print("length of all posts: ")
+    print(len(all_posts))
+    scraper.write_to_tsv(all_posts)
+scraper.quit()
