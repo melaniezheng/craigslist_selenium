@@ -13,41 +13,55 @@ import re
 import traceback
 import itertools as it
 
+class Listing(object):
+    def __init__(self, url, title, date, boro, hood, price, size, bedrooms, cats_ok, dogs_ok, no_fee):
+        self.url = url
+        self.title = title
+        self.date = date
+        self.boro = boro
+        self.hood = hood
+        self.price = price
+        self.size = size
+        self.bedrooms = bedrooms
+        self.cats_allowed = cats_ok
+        self.dogs_allowed = dogs_ok
+        self.no_fee = no_fee
+
+    def __repr__(self):
+        return {'url':self.url, 'title':self.title, 'date':self.date, 'boro':self.boro, 'neighborhood':self.hood, 'price':self.price, 'size':self.size, 'bedrooms':self.bedrooms, \
+            'cats_allowed':self.cats_allowed, 'dogs_allowed':self.dogs_allowed, 'no_fee':self.no_fee}
+
 
 class CraiglistScraper(object):
-    def __init__(self, boro, min_price, max_price, min_bedrooms, max_bedrooms, dogs_ok = 0, cats_ok = 0, no_broker_fee = 1):
+    def __init__(self, boro, url, dogs_ok = 0, cats_ok = 1, no_broker_fee = 0):
         self.boro = boro
-        self.max_price = max_price
-        self.min_price = min_price
-        self.min_bedrooms = min_bedrooms
-        self.max_bedrooms = max_bedrooms
+        self.url = url
         self.dogs_ok = dogs_ok
         self.cats_ok = cats_ok
         self.no_broker_fee = no_broker_fee
         self.driver = webdriver.Chrome("/Users/melaniezheng/Downloads/chromedriver")
         self.delay = 5
-        self.url = f"https://{location}.craigslist.org/search/{self.boro}/apa?&min_price={self.min_price}&max_price={self.max_price}&min_bedrooms={self.min_bedrooms}&max_bedrooms={self.max_bedrooms}&broker_fee=1"
-
-    def get_total_count(self):
-        self.driver.get(self.url)
+  
+    def generate_url_lst(self, url):
+        self.driver.get(url) 
         try:
             wait = WebDriverWait(self.driver, self.delay)
             wait.until(EC.presence_of_element_located((By.ID, "searchform")))
         except TimeoutException:
             print("First URL Loading took too much time")
-        total_count = self.driver.find_elements_by_class_name("totalcount")
-        for count in total_count:
-            pages = count.text
-            print("PAGE: " + pages)
-        return int(pages)
 
-    def generate_url_lst(self, count):
-        # generate a list of urls for each page...
+        total_count = self.driver.find_elements_by_class_name("totalcount")
+        for count in total_count: # get total count of listings
+            pages = count.text
+            print("PAGE: " + pages) # for debugging 
+
         url_lst = []
-        for page in range(0, count, 120):
+        pages = int(pages)
+        for page in range(0, pages, 120):
             page = str(page)
-            url_pp = self.url + "&s=" + page
-            url_lst.append(url_pp)
+            url_pp = url + "&s=" + page
+            url_lst.append(url_pp)  # generate url list
+
         return url_lst
 
     def load_url(self, url):
@@ -58,12 +72,26 @@ class CraiglistScraper(object):
         except TimeoutException:
             print("Loading took too much time")
 
-    def extract_posts(self, url):
+    def filter_ok_listings(self, url):
         html_page = urllib.request.urlopen(url)
         soup = BeautifulSoup(html_page, "lxml")
-        single_page_result = []
+        filter_ok_listings=set()
         for result in soup.findAll("p", {"class": "result-info"}):
-            single_post = {}
+            try:
+                url = result.find("a", {"class": "result-title hdrlnk"})
+                url = url["href"]
+            except:
+                continue
+            filter_ok_listings.add(url)
+        return filter_ok_listings
+
+    def extract_posts(self, url, dogs_ok_listings, cats_ok_listings, no_fee_listings):
+        html_page = urllib.request.urlopen(url)
+        soup = BeautifulSoup(html_page, "lxml")
+        count = 0
+        single_page_result=[]
+        for result in soup.findAll("p", {"class": "result-info"}):
+            count = count + 1
             try:
                 url = result.find("a", {"class": "result-title hdrlnk"})
                 url = url["href"]
@@ -97,35 +125,43 @@ class CraiglistScraper(object):
                     size = housing[1]
             except:
                 size = ""
+            if url in cats_ok_listings:
+                cats_ok = "1"
+            else:
+                cats_ok = "0"
+            if url in dogs_ok_listings:
+                dogs_ok = "1"
+            else:
+                dogs_ok = "0"
+            if url in no_fee_listings:
+                no_fee = "1"
+            else:
+                no_fee = "0"
 
-            single_post['url'] = url
-            single_post['post_date'] = post_date
-            single_post['title'] = title
-            single_post['price'] = price
-            single_post['boro'] = self.boro
-            single_post['neighborhood'] = neighborhood
-            single_post['bedrooms'] = bedrooms
-            single_post['size'] = size
-            single_post['dogs_ok'] = self.dogs_ok
-            single_post['cats_ok'] = self.cats_ok
-            single_post["no_broker_fee"] = self.no_broker_fee
+            listing = Listing(url, title, post_date, boro, neighborhood, price, size, bedrooms, cats_ok, dogs_ok, no_fee)
+            single_page_result.append(listing.__repr__())
 
-            single_page_result.append(single_post)
+        print("COUNT result-row: ") # for debugging
+        print(count)
         return single_page_result
         
     def quit(self):
         self.driver.close()
-
-    def write_to_tsv(self, all_posts):
+    
+    @staticmethod
+    def write_to_tsv(all_posts):
         now = datetime.now()
         file_date = now.strftime("%Y-%m-%d")
-        filepath = "./data/" + file_date + "_" + boro + "_dogs" + str(self.dogs_ok) + \
-            "_cats" + str(self.cats_ok) + "_fee" + str(self.no_broker_fee) + "_temp.tsv"
-        fieldnames = ['url','post_date','title','price','boro','neighborhood','bedrooms','size','dogs_ok', 'cats_ok','no_broker_fee']
-        with open(filepath, "w") as output_file:
-            dict_writer = csv.DictWriter(output_file, fieldnames=fieldnames, delimiter='\t')
-            dict_writer.writeheader()
-            dict_writer.writerows(all_posts)  
+        filepath = "./data/" + file_date + "_" + boro + "_temp.tsv"
+        fieldnames = ['url','title','date','boro','neighborhood','price','size','bedrooms','cats_allowed','dogs_allowed', 'no_fee']
+        try:
+            with open(filepath, "w") as output_file:
+                dict_writer = csv.DictWriter(output_file, fieldnames=fieldnames, delimiter='\t')
+                dict_writer.writeheader()
+                dict_writer.writerows(all_posts)  
+        except ValueError:
+            print("Problem writing to tsv file")
+
 
 location = "newyork"
 boro_list = ["mnh","brk","que","brx","stn"] #brk for BK, que for Queens, brx for Bronx, stn for Staten Island
@@ -135,17 +171,40 @@ min_bedrooms = "0"
 max_bedrooms = "6"
 
 for boro in boro_list:
-    print(boro)
-    scraper = CraiglistScraper(boro, min_price, max_price, min_bedrooms, max_bedrooms)
-    count = scraper.get_total_count()
-    url_lst = scraper.generate_url_lst(count)
-    print(url_lst)
+    url = f"https://{location}.craigslist.org/search/{boro}/apa?&min_price={min_price}&max_price={max_price}&min_bedrooms={min_bedrooms}&max_bedrooms={max_bedrooms}"
+    scraper = CraiglistScraper(boro, url)
+    
+    # print(url_lst) for debugging purpose
+    dog_allowed_url = url + "&pets_dog=1"
+    dog_allowed_url_lst = scraper.generate_url_lst(dog_allowed_url)
+    dogs_ok_listings = set()
+    for dogs_allowed_url in dog_allowed_url_lst:
+        scraper.load_url(dogs_allowed_url)
+        dogs_ok_listings.update(scraper.filter_ok_listings(dogs_allowed_url))
+
+    cat_allowed_url = url + "&pets_cat=1"
+    cat_allowed_url_lst = scraper.generate_url_lst(cat_allowed_url)
+    cats_ok_listings = set()
+    for cat_allowed_url in cat_allowed_url_lst:
+        scraper.load_url(cat_allowed_url)
+        cats_ok_listings.update(scraper.filter_ok_listings(cat_allowed_url))
+
+    no_fee_url = url + "&broker_fee=1"
+    no_fee_url_lst = scraper.generate_url_lst(no_fee_url)
+    no_fee_listings = set()
+    for no_fee_url in no_fee_url_lst:
+        scraper.load_url(no_fee_url)
+        no_fee_listings.update(scraper.filter_ok_listings(no_fee_url))
+    
+    url_lst = scraper.generate_url_lst(url)
     all_posts = []
     for url in url_lst:
         scraper.load_url(url)
-        all_posts.append(scraper.extract_posts(url))
+        all_posts.append(scraper.extract_posts(url, dogs_ok_listings, cats_ok_listings, no_fee_listings))
     all_posts = list(it.chain(*all_posts))
     print("length of all posts: ")
     print(len(all_posts))
-    scraper.write_to_tsv(all_posts)
+    CraiglistScraper.write_to_tsv(all_posts)
+
 scraper.quit()
+
