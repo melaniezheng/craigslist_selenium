@@ -202,8 +202,8 @@ for boro in boro_list:
         scraper.load_url(url)
         all_posts.append(scraper.extract_posts(url, dogs_ok_listings, cats_ok_listings, no_fee_listings))
     all_posts = list(it.chain(*all_posts))
-    print("length of all posts: ")
-    print(len(all_posts))
+    print("length of all posts: ") # debugging
+    print(len(all_posts)) # debugging
     CraiglistScraper.write_to_tsv(all_posts)
 
 scraper.quit()
