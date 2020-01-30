@@ -26,46 +26,27 @@ class CraiglistScraper(object):
         self.no_broker_fee = no_broker_fee
         self.driver = webdriver.Chrome("/Users/melaniezheng/Downloads/chromedriver")
         self.delay = 5
-
-    def generate_url(self):
-        # to define more rules using dogs ok, cats ok, etc...
-        url = ''
-        starter = f"https://{location}.craigslist.org/search/{self.boro}/apa?&min_price={self.min_price}&max_price={self.max_price}&min_bedrooms={self.min_bedrooms}&max_bedrooms={self.max_bedrooms}"
-        if self.dogs_ok == 0 and self.cats_ok == 0 and self.no_broker_fee == 0:
-            url = starter
-        elif self.dogs_ok == 0 and self.cats_ok == 0 and self.no_broker_fee == 1:
-            url = starter + "&broker_fee=1"
-        elif self.dogs_ok == 1 and self.cats_ok == 0 and self.no_broker_fee == 0:
-            url = starter + "&pets_dog=1"
-        elif self.dogs_ok == 0 and self.cats_ok == 1 and self.no_broker_fee == 0:
-            url = starter + "&pets_cat=1"
-        elif self.dogs_ok == 1 and self.cats_ok == 1 and self.no_broker_fee == 1:
-            url = starter + "&pets_cat=1&pets_dog=1&broker_fee=1"
-        return url
+        self.url = f"https://{location}.craigslist.org/search/{self.boro}/apa?&min_price={self.min_price}&max_price={self.max_price}&min_bedrooms={self.min_bedrooms}&max_bedrooms={self.max_bedrooms}"
 
     def get_total_count(self):
-        self.driver.get(self.generate_url())
+        self.driver.get(self.url)
         try:
             wait = WebDriverWait(self.driver, self.delay)
             wait.until(EC.presence_of_element_located((By.ID, "searchform")))
         except TimeoutException:
             print("First URL Loading took too much time")
-    
         total_count = self.driver.find_elements_by_class_name("totalcount")
         for count in total_count:
-            pages = count.text#.split("$")
-            #page = pages[0]
+            pages = count.text
             print("PAGE: " + pages)
-
         return int(pages)
 
     def generate_url_lst(self, count):
         # generate a list of urls for each page...
         url_lst = []
-        url = self.generate_url()
         for page in range(0, count, 120):
             page = str(page)
-            url_pp = url + "&s=" + page
+            url_pp = self.url + "&s=" + page
             url_lst.append(url_pp)
         return url_lst
 
@@ -77,10 +58,8 @@ class CraiglistScraper(object):
         except TimeoutException:
             print("Loading took too much time")
 
-
-    def extract_posts(self, single_page_result=[]):
-
-        html_page = urllib.request.urlopen(self.generate_url())
+    def extract_posts(self, url, single_page_result=[]):
+        html_page = urllib.request.urlopen(url)
         soup = BeautifulSoup(html_page, "lxml")
         for result in soup.findAll("p", {"class": "result-info"}):
             single_post = {}
@@ -139,8 +118,8 @@ class CraiglistScraper(object):
     def write_to_tsv(self, all_posts):
         now = datetime.now()
         file_date = now.strftime("%Y-%m-%d")
-        filepath = "./data/" + file_date + "_" + boro + "_dogs_" + str(self.dogs_ok) + \
-            "cats_" + str(self.cats_ok) + "fee_" + str(self.no_broker_fee) + "_temp.tsv"
+        filepath = "./data/" + file_date + "_" + boro + "_dogs" + str(self.dogs_ok) + \
+            "_cats" + str(self.cats_ok) + "_fee" + str(self.no_broker_fee) + "_temp.tsv"
         fieldnames = ['url','post_date','title','price','boro','neighborhood','bedrooms','size','dogs_ok', 'cats_ok','no_broker_fee']
         with open(filepath, "w") as output_file:
             dict_writer = csv.DictWriter(output_file, fieldnames=fieldnames, delimiter='\t')
@@ -163,7 +142,7 @@ for boro in boro_list:
     all_posts = []
     for url in url_lst:
         scraper.load_url(url)
-        all_posts.append(scraper.extract_posts())
+        all_posts.append(scraper.extract_posts(url))
     all_posts = list(it.chain(*all_posts))
     print("length of all posts: ")
     print(len(all_posts))
