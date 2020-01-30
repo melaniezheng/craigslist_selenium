@@ -13,25 +13,21 @@ import re
 import traceback
 import itertools as it
 
-class Single_Post(object):
-    def __init__(self, url, title, date, boro, hood, price, size, bedrooms, cats_allowed, dogs_allowed, no_fee):
-        self.url = url
-        self.title = title
-        self.date = date
-        self.boro = boro
-        self.hood = hood
-        self.price = price
-        
+
 class CraiglistScraper(object):
-    def __init__(self, boro, url, dogs_ok = 0, cats_ok = 1, no_broker_fee = 0):
+    def __init__(self, boro, min_price, max_price, min_bedrooms, max_bedrooms, dogs_ok = 0, cats_ok = 0, no_broker_fee = 1):
         self.boro = boro
-        self.url = url
+        self.max_price = max_price
+        self.min_price = min_price
+        self.min_bedrooms = min_bedrooms
+        self.max_bedrooms = max_bedrooms
         self.dogs_ok = dogs_ok
         self.cats_ok = cats_ok
         self.no_broker_fee = no_broker_fee
         self.driver = webdriver.Chrome("/Users/melaniezheng/Downloads/chromedriver")
         self.delay = 5
-        
+        self.url = f"https://{location}.craigslist.org/search/{self.boro}/apa?&min_price={self.min_price}&max_price={self.max_price}&min_bedrooms={self.min_bedrooms}&max_bedrooms={self.max_bedrooms}&broker_fee=1"
+
     def get_total_count(self):
         self.driver.get(self.url)
         try:
@@ -65,10 +61,8 @@ class CraiglistScraper(object):
     def extract_posts(self, url):
         html_page = urllib.request.urlopen(url)
         soup = BeautifulSoup(html_page, "lxml")
-        count = 0
-        single_page_result=[]
+        single_page_result = []
         for result in soup.findAll("p", {"class": "result-info"}):
-            count = count + 1
             single_post = {}
             try:
                 url = result.find("a", {"class": "result-title hdrlnk"})
@@ -114,10 +108,9 @@ class CraiglistScraper(object):
             single_post['size'] = size
             single_post['dogs_ok'] = self.dogs_ok
             single_post['cats_ok'] = self.cats_ok
-            single_post['no_broker_fee'] = self.no_broker_fee
+            single_post["no_broker_fee"] = self.no_broker_fee
+
             single_page_result.append(single_post)
-        print("COUNT result-row: ")
-        print(count)
         return single_page_result
         
     def quit(self):
@@ -142,8 +135,8 @@ min_bedrooms = "0"
 max_bedrooms = "6"
 
 for boro in boro_list:
-    url = f"https://{location}.craigslist.org/search/{boro}/apa?&min_price={min_price}&max_price={max_price}&min_bedrooms={min_bedrooms}&max_bedrooms={max_bedrooms}"
-    scraper = CraiglistScraper(boro, url)
+    print(boro)
+    scraper = CraiglistScraper(boro, min_price, max_price, min_bedrooms, max_bedrooms)
     count = scraper.get_total_count()
     url_lst = scraper.generate_url_lst(count)
     print(url_lst)
@@ -155,6 +148,4 @@ for boro in boro_list:
     print("length of all posts: ")
     print(len(all_posts))
     scraper.write_to_tsv(all_posts)
-
-
 scraper.quit()
