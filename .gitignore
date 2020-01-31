@@ -1,0 +1,10 @@
+.DS_Store
+.ipynb_checkpoints/*
+clean_data_visualization.ipynb
+craigslist_selenium_temptemp.py
+data/*
+data_backup/*
+data_cleaning.py
+log.text
+log_ch.text
+log_sf.text
