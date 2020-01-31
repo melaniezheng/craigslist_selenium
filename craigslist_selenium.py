@@ -106,20 +106,7 @@ class CraiglistScraper(object):
                 title = result.find('a').string
             except:
                 title = ""
-            try:
-                price = result.find('span', {'class':'result-price'}).string
-            except:
-                price = ""
-            try:
-                neighborhood = result.find('span', {'class':'result-hood'}).string.strip()
-            except:
-                neighborhood = ""
-            try:
-                bedrooms = result.find('span', {'class':'housing'}).string
-            except:
-                bedrooms = ""
-            try:
-                housing = result.find('span', {'class':'housing'}).string.split("-")
+            lt.find('span', {'class':'housing'}).string.split("-")
                 if len(housing)>1:
                     bedrooms = housing[0]
                     size = housing[1]
@@ -161,6 +148,7 @@ class CraiglistScraper(object):
                 dict_writer.writerows(all_posts)  
         except ValueError:
             print("Problem writing to tsv file")
+
 
 
 cities = {}
