@@ -19,8 +19,11 @@ cities['austin'] = []
 cities['denver'] = []
 # add phoenix - cph evl nph wvl, sandiego - csd nsd esd ssd
 
+price_range = [("500","2000"),("2001","7000")]
+max_bedrooms = "6"
+
 def feature_urls(boro, url):
-    result=[]
+
     dog_allowed_url = url + "&pets_dog=1"
     cat_allowed_url = url + "&pets_cat=1"
     no_fee_url = url + "&broker_fee=1"
@@ -44,43 +47,42 @@ def feature_urls(boro, url):
         scraper.load_url(no_fee_url)
         no_fee_listings.update(scraper.filter_ok_listings(no_fee_url))
 
-    result.append(scraper)
-    result.append(dogs_ok_listings)
-    result.append(cats_ok_listings)
-    result.append(no_fee_listings)
-    return result
-
-min_price = "500"
-max_price = "5000"
-min_bedrooms = "0"
-max_bedrooms = "6"
+    return tuple([scraper,dogs_ok_listings,cats_ok_listings,no_fee_listings])
 
 for city in cities:
+    # if city in set(['newyork','losangeles']):
+    #     continue
     location = city
     boro_list = cities[city]
     if boro_list == []:
         boro = ""
-        url = f"https://{location}.craigslist.org/search/apa?&min_price={min_price}&max_price={max_price}&min_bedrooms={min_bedrooms}&max_bedrooms={max_bedrooms}"
-        scraper, dogs_ok_listings, cats_ok_listings, no_fee_listings = feature_urls(boro, url)
-        url_lst = scraper.generate_url_lst(url) # generate urls for all pages
         all_posts = []
-        for url in url_lst:
-            scraper.load_url(url)
-            all_posts.extend(scraper.extract_posts(url, dogs_ok_listings, cats_ok_listings, no_fee_listings))
-        print("length of all posts: ") # debugging
-        print(len(all_posts)) # debugging
-        scraper.write_to_tsv(all_posts,location)
-    else:    
-        for boro in boro_list:
-            url = f"https://{location}.craigslist.org/search/{boro}/apa?&min_price={min_price}&max_price={max_price}&min_bedrooms={min_bedrooms}&max_bedrooms={max_bedrooms}"
+        for prices in price_range:
+            min_price, max_price = prices
+            url = f"https://{location}.craigslist.org/search/apa?&min_price={min_price}&max_price={max_price}&max_bedrooms={max_bedrooms}"
             scraper, dogs_ok_listings, cats_ok_listings, no_fee_listings = feature_urls(boro, url)
             url_lst = scraper.generate_url_lst(url) # generate urls for all pages
-            all_posts = []
+            if url_lst == []:
+                continue
             for url in url_lst:
                 scraper.load_url(url)
                 all_posts.extend(scraper.extract_posts(url, dogs_ok_listings, cats_ok_listings, no_fee_listings))
-            print("length of all posts: ") # debugging
-            print(len(all_posts)) # debugging
-            scraper.write_to_tsv(all_posts,location)
+        print(f"{location} has {len(all_posts)} listings.") # debugging
+        scraper.write_to_tsv(all_posts,location)
+    else:
+        all_posts = []
+        for boro in boro_list:
+            for prices in price_range:
+                min_price, max_price = prices
+                url = f"https://{location}.craigslist.org/search/{boro}/apa?&min_price={min_price}&max_price={max_price}&max_bedrooms={max_bedrooms}"
+                scraper, dogs_ok_listings, cats_ok_listings, no_fee_listings = feature_urls(boro, url)
+                url_lst = scraper.generate_url_lst(url) # generate urls for all pages
+                if url_lst == []:
+                    continue
+                for url in url_lst:
+                    scraper.load_url(url)
+                    all_posts.extend(scraper.extract_posts(url, dogs_ok_listings, cats_ok_listings, no_fee_listings))
+        print(f"{location} has {len(all_posts)} listings.") # debugging
+        scraper.write_to_tsv(all_posts,location)
 scraper.quit()
 

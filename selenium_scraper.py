@@ -24,12 +24,16 @@ class CraiglistScraper(object):
         self.delay = 5
   
     def generate_url_lst(self, url):
-        self.driver.get(url) 
+        try:
+            self.driver.get(url)
+        except Exception as e:
+            print(f"ERROR: Chrome timeout, url {url}")
+            print(f"ERROR: {e}")
         try:
             wait = WebDriverWait(self.driver, self.delay)
             wait.until(EC.presence_of_element_located((By.ID, "searchform")))
         except TimeoutException:
-            print("First URL Loading took too much time")
+            print(f"Chrome Timeout --- delay is set to: {self.delay}")
 
         total_count = self.driver.find_elements_by_class_name("totalcount")
         for count in total_count: # get total count of listings
@@ -37,21 +41,28 @@ class CraiglistScraper(object):
             print("PAGE: " + pages) # for debugging 
 
         url_lst = []
-        pages = int(pages)
-        for page in range(0, pages, 120):
-            page = str(page)
-            url_pp = url + "&s=" + page
-            url_lst.append(url_pp)  # generate url list
+        try:
+            pages = int(pages)
+            for page in range(0, pages, 120):
+                page = str(page)
+                url_pp = url + "&s=" + page
+                url_lst.append(url_pp)  # generate url list
+        except UnboundLocalError:
+            print('no result')
 
         return url_lst
 
     def load_url(self, url):
-        self.driver.get(url)
+        try:
+            self.driver.get(url)
+        except Exception as e:
+            print(f"Chrome Timeout, url: {url}")
+            print(f"ERROR: {e}")
         try:
             wait = WebDriverWait(self.driver, self.delay)
             wait.until(EC.presence_of_element_located((By.ID, "searchform")))
         except TimeoutException:
-            print("Loading took too much time")
+            print(f"Chrome Timeout --- delay is set to: {self.delay}")
 
     def filter_ok_listings(self, url):
         html_page = urllib.request.urlopen(url)
@@ -71,13 +82,21 @@ class CraiglistScraper(object):
         soup = BeautifulSoup(html_page, "lxml")
         count = 0
         single_page_result=[]
-        for result in soup.findAll("p", {"class": "result-info"}):
+        for result in soup.findAll("li", {"class": "result-row"}):
             count = count + 1
             try:
                 url = result.find("a", {"class": "result-title hdrlnk"})
                 url = url["href"]
             except:
                 continue
+            try:
+                listing_id = result["data-pid"]
+            except:
+                listing_id = ""
+            try:
+                repost_of = result["data-repost-of"]
+            except:
+                repost_of = ""
             try:
                 post_date = result.find("time", {"class": "result-date"})
                 post_date = post_date["datetime"]
@@ -96,16 +115,10 @@ class CraiglistScraper(object):
             except:
                 neighborhood = ""
             try:
-                bedrooms = result.find('span', {'class':'housing'}).string
+                bedrooms = result.find('span', {'class':'housing'}).text
+                #print(f'bedrooms: {bedrooms}')
             except:
                 bedrooms = ""
-            try:
-                housing = result.find('span', {'class':'housing'}).string.split("-")
-                if len(housing)>1:
-                    bedrooms = housing[0]
-                    size = housing[1]
-            except:
-                size = ""
             if url in cats_ok_listings:
                 cats_ok = "1"
             else:
@@ -119,21 +132,20 @@ class CraiglistScraper(object):
             else:
                 no_fee = "0"
 
-            listing = Listing(url, title, post_date, self.boro, neighborhood, price, size, bedrooms, cats_ok, dogs_ok, no_fee)
+            listing = Listing(url, listing_id, repost_of, title, post_date, self.boro, neighborhood, price, "",bedrooms, cats_ok, dogs_ok, no_fee)
             single_page_result.append(listing.__repr__())
 
-        print("COUNT result-row: ") # for debugging
-        print(count)
         return single_page_result
-        
+
+
     def quit(self):
         self.driver.close()
-    
+
     def write_to_tsv(self, all_posts, location):
         now = datetime.now()
         file_date = now.strftime("%Y-%m-%d")
-        filepath = "./data/" + location + "_"+ file_date + "_" + self.boro + ".tsv"
-        fieldnames = ['url','title','date','boro','neighborhood','price','size','bedrooms','cats_allowed','dogs_allowed', 'no_fee']
+        filepath = "./data/craigslist_" + file_date + "_" + location + ".tsv"
+        fieldnames = ['url','listing_id','repost_of','title','date','boro','neighborhood','price','size','bedrooms','cats_allowed','dogs_allowed', 'no_fee']
         try:
             with open(filepath, "w") as output_file:
                 dict_writer = csv.DictWriter(output_file, fieldnames=fieldnames, delimiter='\t')

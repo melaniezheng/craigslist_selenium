@@ -15,3 +15,5 @@ data.tsv
 output.txt
 data/*
 ppt/*
+data_cleaning_visualization.R
+*.tsv
