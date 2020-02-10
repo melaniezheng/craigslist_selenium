@@ -1,5 +1,5 @@
 class Listing(object):
-    def __init__(self, url, listing_id, repost_of, title, date, boro, hood, price, size="", bedrooms, cats_ok, dogs_ok, no_fee):
+    def __init__(self, url, listing_id, repost_of, title, date, boro, hood, price, bedrooms, cats_ok, dogs_ok, no_fee, size="",):
         self.url = url
         self.listing_id = listing_id
         self.repost_of = repost_of

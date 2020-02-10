@@ -4,18 +4,18 @@ import re
 import itertools as it
 
 cities = {}
-cities['newyork'] = ["mnh","brk","que","brx","stn"]
-cities['losangeles'] = ["wst","sfv","lac","sgv","lgb","ant"] 
-cities['chicago'] = ["chc","nch", "wcl", "sox", "nwi", "nwc"]
-cities['sfbay'] = ["sfc", "sby", "eby", "pen", "nby", "scz"]
-cities['dallas'] = ["dal", "ftw", "mdf", "ndf", "sdf"]
-cities['seattle'] = ["see" ,"est" ,"sno" ,"kit" ,"tac", "oly", "skc"]
-cities['boston'] = ["gbs", "nwb", "bmw", "nos", "sob"]
-cities['sandiego'] = ["csd", "nsd", "esd", "ssd"]
-cities['houston'] = []
-cities['philadelphia'] =[]
-cities['sanantonio'] = []
-cities['austin'] = []
+# cities['newyork'] = ["mnh","brk","que","brx","stn"]
+# cities['losangeles'] = ["wst","sfv","lac","sgv","lgb","ant"] 
+# cities['chicago'] = ["chc","nch", "wcl", "sox", "nwi", "nwc"]
+# cities['sfbay'] = ["sfc", "sby", "eby", "pen", "nby", "scz"]
+# cities['dallas'] = ["dal", "ftw", "mdf", "ndf", "sdf"]
+# cities['seattle'] = ["see" ,"est" ,"sno" ,"kit" ,"tac", "oly", "skc"]
+# cities['boston'] = ["gbs", "nwb", "bmw", "nos", "sob"]
+# cities['sandiego'] = ["csd", "nsd", "esd", "ssd"]
+# cities['houston'] = []
+# cities['philadelphia'] =[]
+# cities['sanantonio'] = []
+# cities['austin'] = []
 cities['denver'] = []
 # add phoenix - cph evl nph wvl, sandiego - csd nsd esd ssd
 
@@ -50,8 +50,8 @@ def feature_urls(boro, url):
     return tuple([scraper,dogs_ok_listings,cats_ok_listings,no_fee_listings])
 
 for city in cities:
-    # if city in set(['newyork','losangeles']):
-    #     continue
+    if city in set(['newyork','losangeles','chicago']):
+        continue
     location = city
     boro_list = cities[city]
     if boro_list == []:

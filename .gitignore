@@ -17,3 +17,4 @@ data/*
 ppt/*
 data_cleaning_visualization.R
 *.tsv
+*.csv

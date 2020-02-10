@@ -103,7 +103,8 @@ class CraiglistScraper(object):
             except:
                 post_date = ""
             try: 
-                title = result.find('a').string
+                a = result.find('p', {'class': 'result-info'})
+                title = a.find('a').string.strip()
             except:
                 title = ""
             try:
@@ -132,7 +133,7 @@ class CraiglistScraper(object):
             else:
                 no_fee = "0"
 
-            listing = Listing(url, listing_id, repost_of, title, post_date, self.boro, neighborhood, price, "",bedrooms, cats_ok, dogs_ok, no_fee)
+            listing = Listing(url, listing_id, repost_of, title, post_date, self.boro, neighborhood, price, bedrooms, cats_ok, dogs_ok, no_fee)
             single_page_result.append(listing.__repr__())
 
         return single_page_result
