@@ -6,7 +6,7 @@ library(plotly)
 library(googleVis)
 library(stringr)
 
-fix_hood <- read.csv(file = "./fix_hood.csv",stringsAsFactors = FALSE)
+fix_hood <- read.csv(file = "./data/fix_hood.csv",stringsAsFactors = FALSE)
 
 realty <- read.csv(file = "./data/realtyhop_clean.tsv",sep = "\t",stringsAsFactors = FALSE) %>% 
   rename(., 'br'='bedroom') %>% 
@@ -55,19 +55,18 @@ ggplot(a, aes(rent, sale.sqf)) + geom_point()
 # write.csv(realty %>% filter(., br=='Stubr') %>% arrange(., desc(price)) %>% select(., type_,price ,url),
 #           "Stubr.csv", row.names = F)
 
-joinDF <- cr_unique %>% group_by(., NEIGHBORHOOD, br_cat) %>% 
+joinDF <- cr_unique %>% group_by(., NEIGHBORHOOD) %>% 
   summarise(., mean.price.cr = mean(price), med.price.cr = median(price)) %>% 
-  inner_join(., rh %>% group_by(., NEIGHBORHOOD, br_cat) %>% 
+  inner_join(., rh %>% group_by(., NEIGHBORHOOD) %>% 
                summarise(., mean.price.rh = mean(price), med.price.rh = median(price)), 
-             by=c('NEIGHBORHOOD','br_cat')) %>% 
+             by='NEIGHBORHOOD') %>% 
   mutate(., mean_diff=mean.price.cr-mean.price.rh, med_diff=med.price.cr - med.price.rh,
          mean.diff.perc=round(mean_diff/mean.price.rh*100,2), med.diff.perc=round(med_diff/med.price.rh*100,2))
 
-# compare mean rents
+# compare median rents
 ggplot(joinDF %>% gather(., key=key, value=value, c("med.price.cr","med.price.rh")) %>% 
-         mutate(., key=ifelse(key=="med.price.cr","Craigslist",'Renthop')) %>% 
-         arrange(., NEIGHBORHOOD, br_cat, key), aes(NEIGHBORHOOD, value)) +
-  geom_col(aes(x=reorder(NEIGHBORHOOD,value),fill=key), position='dodge') +
+         mutate(., key=ifelse(key=="med.price.cr","Craigslist",'Renthop')), aes(NEIGHBORHOOD, value)) +
+  geom_col(aes(x=reorder(NEIGHBORHOOD, value),fill=key), position='dodge') +
   scale_fill_manual(values = c("#5815AD","#871551"))+
   labs(fill = "Median Rent")+
   xlab("")+
@@ -76,9 +75,9 @@ ggplot(joinDF %>% gather(., key=key, value=value, c("med.price.cr","med.price.rh
   coord_flip()+
   ggsave("./ppt/RH_vs_CR_median.png", width = 5, height = 5)
 
-# mean rent price diff.
+# median rent price diff.
 ggplot(joinDF %>% filter(., NEIGHBORHOOD != 'Downtown') %>% group_by(., NEIGHBORHOOD) %>% 
-         summarise(., mean=round(mean(mean.diff.perc),2)), 
+         summarise(., mean=round(mean(med.diff.perc),2)), 
        aes(NEIGHBORHOOD, mean,label = paste0(mean,"%"))) +
   geom_col(aes(x=reorder(NEIGHBORHOOD, mean)), fill='#5815AD') +
   xlab("")+
@@ -148,6 +147,42 @@ data2 <- data %>%
                                 ifelse(br %in% c('4br', '5br','6br'), "4br & more","NA"))))
 
 data_uniq <- data2 %>% filter(., is.na(repost_of))
+
+ggplot(data_uniq %>% filter(., ft2>100) %>% filter(., ft2<10000), aes(ft2, y=price))+
+  xlim(0, 3000)+
+  facet_wrap(~city, scales = 'free')+
+  xlab('size (in sqf)')+
+  ylab('rent')+
+  geom_point(alpha = 0.05, size = 1,color='#5815AD')+
+  geom_smooth(size=0.3, alpha=0.1)
+  
+ggplot(data_uniq %>% filter(., ft2>100) %>% filter(., ft2<10000), aes(ft2, y=price))+
+  xlim(0, 3000)+
+  facet_wrap(~city, scales = 'free')+
+  xlab('size (in sqf)')+
+  ylab('rent')+
+  geom_point(alpha = 0.05, size = 1,color='#5815AD')+
+  geom_smooth(size=0.3, alpha=0.1)
+
+ggplot(data_uniq %>% filter(., ft2>100) %>% filter(., ft2<10000), aes(ft2))+
+  #xlim(0, 000)+
+  facet_wrap(~city, scales='free')+
+  xlab('size (in sqf)')+
+  scale_x_continuous(labels = scales::comma)+
+  scale_y_continuous(labels = scales::comma)+
+  geom_freqpoly(binwidth=200,color='#5815AD')
+
+library(scales)
+ggplot(data_uniq, aes(price))+
+  facet_wrap(~city)+
+  geom_density(color='#5815AD' ) +
+  xlab('rent per month')+
+  ylab("")+
+  scale_x_continuous(labels = scales::dollar)+
+  scale_y_continuous(labels = scales::percent)+
+  ggsave("./ppt/density.png", width = 6, height = 3)
+
+data_uniq %>% filter(., city=='Boston') %>% filter(., size<500)
 
 # box plot cities:
 ggplot(data_uniq, aes(x=reorder(city, price), y=price, group=city)) +
@@ -266,7 +301,7 @@ ggplot(pet_friendly %>% gather(.,key=key,value=value,c('cat_friendly','dog_frien
   theme(axis.text=element_text(size=12),
         axis.title=element_text(size=12),
         strip.text.x = element_text(size = 14, face="bold",colour = "#5815AD", angle = 0)) +
-  ggsave("./ppt/nyc_pet_friendly.png", width = 10, height = 5)
+  ggsave("./ppt/nyc_pet_friendly.png", width = 10, height = 4)
 
 # 'pet premium'
 pets_premium <- cr_unique %>% mutate(., pets_ok=ifelse(dogs_allowed==0&cats_allowed==0, "No", "Yes")) %>% 
@@ -391,6 +426,18 @@ nyc <- data_uniq %>% filter(., city=="New York") %>%
                                            ifelse(boro=="que", "Queens", "Bronx")))))
 
 nyc <- nyc %>% mutate(.,pets_ok=ifelse(dogs_allowed==0&cats_allowed==0, "Pets Not Allowed", "Pets Allowed"))
+
+#density
+library(scales)
+ggplot(nyc, aes(price))+
+  facet_wrap(~borough)+
+  geom_density(color='#5815AD' ) +
+  xlab('rent per month')+
+  ylab("")+
+  scale_x_continuous(labels = scales::dollar)+
+  scale_y_continuous(labels = scales::percent)+
+  ggsave("./ppt/density-nyc.png", width = 6, height = 3)
+
 # box plot nyc:
 ggplot(nyc, aes(x=reorder(borough, price), y=price, group=borough)) +
   geom_boxplot(fill='#5815AD', color='grey') +
@@ -398,7 +445,7 @@ ggplot(nyc, aes(x=reorder(borough, price), y=price, group=borough)) +
   theme_bw() +
   xlab('') +
   ylab('Rent/month')+
-  ggsave("./ppt/boxplot_nyc.png", width = 3, height = 3)
+  ggsave("./ppt/boxplot_nyc.png", width = 5, height = 3)
 
 ggplot(nyc %>% group_by(., borough) %>% summarise(., rent=round(mean(price))),
        aes(borough, rent, label=paste0("$",rent)))+
@@ -434,7 +481,7 @@ ggplot(nyc_pets_ok_perc, aes(borough, pets_ok_perc, label=paste0(pets_ok_perc, "
   geom_text(size = 4, color='#FCFBFF',position = position_stack(reverse = T,vjust = 0.5)) +
   xlab("") +
   ylab("pets allowed listings/ total listings") +
-  ggsave("./ppt/boro_pets_allowed_perc.png", width = 4, height = 3)
+  ggsave("./ppt/boro_pets_allowed_perc.png", width = 6, height = 3)
 
 nyc_pet_premium <- nyc %>% group_by(.,borough, pets_ok) %>% summarise(., price = round(median(price))) %>% 
   spread(., pets_ok, price) %>% mutate(., diff = `Pets Allowed`-`Pets Not Allowed`, 
