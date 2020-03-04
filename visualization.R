@@ -52,8 +52,6 @@ ggplot(a, aes(rent, sale.sqf)) + geom_point()
   scale_x_continuous(labels = comma)+
   scale_y_continuous(labels = comma)
   
-# write.csv(realty %>% filter(., br=='Stubr') %>% arrange(., desc(price)) %>% select(., type_,price ,url),
-#           "Stubr.csv", row.names = F)
 
 joinDF <- cr_unique %>% group_by(., NEIGHBORHOOD) %>% 
   summarise(., mean.price.cr = mean(price), med.price.cr = median(price)) %>% 
@@ -121,7 +119,7 @@ ggplot(rent_vs_buy, aes(rent, sales))+geom_point(aes(color=br_cat), size = 2)+
   ggsave("./ppt/Rent_vs_Sale.png", width = 8, height = 5)
   
 
-#******************************* NATIONAL RENTS ***************************************
+#******************************* NATIONAL RENTS ********************************
 data <- read.csv(file = "./data/lcty_data_clean.tsv", sep = "\t",stringsAsFactors = FALSE)
 data <- data %>% mutate(., title_len = nchar(title)) %>% mutate(., br = gsub(' ','',br))
 data$time_range = ifelse(as.integer(substr(data$time,1,2))>=8 & as.integer(substr(data$time,1,2))<=15, "8AM~4PM",
@@ -134,7 +132,7 @@ data %>% group_by(., date2) %>% summarise(., count=n()) %>% arrange(., desc(coun
 # of reposts  8,509
 data %>% filter(., !is.na(repost_of)) %>% group_by(., date2) %>% summarise(., count=n()) %>% arrange(., desc(count)) %>% top_n(.,3) %>% summarise(., mean(count))
 
-# ********** Clean up bedrooms ****************
+# ***************************** Clean up bedrooms ******************************
 data2 <- data %>% 
   mutate(., title = tolower(title), br = ifelse(br!="",br,
                               ifelse(grepl("1/.|1x.|1bdrm|1.bdrm|one.bdrm|1.bed|one.bed|studio|1 bed|1bed|1br|1.br|1bd|1.bd|one.bed|one.bd|one.br",title), "1br",
@@ -269,10 +267,8 @@ cats_allowed <- data_uniq %>% group_by(.,city,cats_allowed) %>%
   mutate(., More = Yes - No, Perc = round(More/No*100), Type = 'Cats Allowed') 
 
 
-
+# listing price vs pet friendliness
 pets_allowed_perc <- rbind(dogs_allowed, cats_allowed)
-
-##242C62 - background
 ggplot(pets_allowed_perc, aes(city, Perc, label=paste0(Perc,'%'))) +
   coord_flip()+
   geom_col(aes(x=reorder(city, Perc)),fill = '#5815AD') +
