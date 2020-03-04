@@ -21,7 +21,6 @@ for filename in filenames:
     elif location == 'Newyork':
         location = 'New York'
     temp = pd.read_csv(filename,sep='\t')
-    # add a column
     temp['city'] = location
     dfs.append(temp)
 
