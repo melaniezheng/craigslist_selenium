@@ -8,7 +8,7 @@
 6. all the data are saved in /data folder.
 7. combine_data_to_tsv.py will combine all the listings from all cities into one file.
 8. cleaning.py file is located in another repo (renthop_scrapy) and performs the data cleaning using pandas and numpy.
-9. visualization.R - using R to perform data visualization
+9. visualization.R - using R to perform data visualization.
 
 - also check out https://github.com/melaniezheng/craigslist_bs4 - webscraping nyc manhattan listing for each neighborhoods with <i>BeautifulSoup</i>.
 - https://github.com/melaniezheng/renthop_scrapy manhattan rental listings on Renthop with <i>Scrapy</i>. 
