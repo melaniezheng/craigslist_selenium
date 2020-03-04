@@ -1,4 +1,4 @@
-# Apartment listings on Craigslist and Renthop
+## Web Scraping Apartment listings
 
 1. web scraping craigslist apartment listings for major us cities using selenium and beautiful soup.
 2. main file to run: <i>craigslist.py</i>
