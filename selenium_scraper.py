@@ -20,7 +20,7 @@ class CraiglistScraper(object):
         self.dogs_ok = dogs_ok
         self.cats_ok = cats_ok
         self.no_broker_fee = no_broker_fee
-        self.driver = webdriver.Chrome("/Users/melaniezheng/Downloads/chromedriver")
+        self.driver = webdriver.Chrome("~/Downloads/chromedriver")
         self.delay = 5
   
     def generate_url_lst(self, url):
@@ -38,7 +38,6 @@ class CraiglistScraper(object):
         total_count = self.driver.find_elements_by_class_name("totalcount")
         for count in total_count: # get total count of listings
             pages = count.text
-            print("PAGE: " + pages) # for debugging 
 
         url_lst = []
         try:
@@ -117,7 +116,6 @@ class CraiglistScraper(object):
                 neighborhood = ""
             try:
                 bedrooms = result.find('span', {'class':'housing'}).text
-                #print(f'bedrooms: {bedrooms}')
             except:
                 bedrooms = ""
             if url in cats_ok_listings:
