@@ -4,21 +4,22 @@ import re
 import itertools as it
 
 cities = {}
-# cities['newyork'] = ["mnh","brk","que","brx","stn"]
-# cities['losangeles'] = ["wst","sfv","lac","sgv","lgb","ant"] 
-# cities['chicago'] = ["chc","nch", "wcl", "sox", "nwi", "nwc"]
-# cities['sfbay'] = ["sfc", "sby", "eby", "pen", "nby", "scz"]
-# cities['dallas'] = ["dal", "ftw", "mdf", "ndf", "sdf"]
-# cities['seattle'] = ["see" ,"est" ,"sno" ,"kit" ,"tac", "oly", "skc"]
-# cities['boston'] = ["gbs", "nwb", "bmw", "nos", "sob"]
-# cities['sandiego'] = ["csd", "nsd", "esd", "ssd"]
-# cities['houston'] = []
-# cities['philadelphia'] =[]
-# cities['sanantonio'] = []
-# cities['austin'] = []
+cities['newyork'] = ["mnh","brk","que","brx","stn"]
+cities['losangeles'] = ["wst","sfv","lac","sgv","lgb","ant"] 
+cities['chicago'] = ["chc","nch", "wcl", "sox", "nwi", "nwc"]
+cities['sfbay'] = ["sfc", "sby", "eby", "pen", "nby", "scz"]
+cities['dallas'] = ["dal", "ftw", "mdf", "ndf", "sdf"]
+cities['seattle'] = ["see" ,"est" ,"sno" ,"kit" ,"tac", "oly", "skc"]
+cities['boston'] = ["gbs", "nwb", "bmw", "nos", "sob"]
+cities['sandiego'] = ["csd", "nsd", "esd", "ssd"]
+cities['houston'] = []
+cities['philadelphia'] =[]
+cities['sanantonio'] = []
+cities['austin'] = []
 cities['denver'] = []
-# add phoenix - cph evl nph wvl, sandiego - csd nsd esd ssd
 
+# Craigslist only shows 3000 listings even though more listings meet the criteria.
+# We will request webpage twice to get the maximum listings. 500 ~ 2000 and 2001 ~ 7000
 price_range = [("500","2000"),("2001","7000")]
 max_bedrooms = "6"
 
@@ -61,14 +62,14 @@ for city in cities:
             min_price, max_price = prices
             url = f"https://{location}.craigslist.org/search/apa?&min_price={min_price}&max_price={max_price}&max_bedrooms={max_bedrooms}"
             scraper, dogs_ok_listings, cats_ok_listings, no_fee_listings = feature_urls(boro, url)
-            url_lst = scraper.generate_url_lst(url) # generate urls for all pages
+            url_lst = scraper.generate_url_lst(url) 
             if url_lst == []:
                 continue
             for url in url_lst:
                 scraper.load_url(url)
                 all_posts.extend(scraper.extract_posts(url, dogs_ok_listings, cats_ok_listings, no_fee_listings))
-        print(f"{location} has {len(all_posts)} listings.") # debugging
         scraper.write_to_tsv(all_posts,location)
+        
     else:
         all_posts = []
         for boro in boro_list:
@@ -76,13 +77,13 @@ for city in cities:
                 min_price, max_price = prices
                 url = f"https://{location}.craigslist.org/search/{boro}/apa?&min_price={min_price}&max_price={max_price}&max_bedrooms={max_bedrooms}"
                 scraper, dogs_ok_listings, cats_ok_listings, no_fee_listings = feature_urls(boro, url)
-                url_lst = scraper.generate_url_lst(url) # generate urls for all pages
+                url_lst = scraper.generate_url_lst(url) 
                 if url_lst == []:
                     continue
                 for url in url_lst:
                     scraper.load_url(url)
                     all_posts.extend(scraper.extract_posts(url, dogs_ok_listings, cats_ok_listings, no_fee_listings))
-        print(f"{location} has {len(all_posts)} listings.") # debugging
         scraper.write_to_tsv(all_posts,location)
+        
 scraper.quit()
 
